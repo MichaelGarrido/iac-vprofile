@@ -14,6 +14,7 @@ on:
       - terraform/**
 
 env:
+  # S3 bucket for the Terraform state
   BUCKET_TF_STATE: ${{ secrets.BUCKET_TF_STATE }}
   AWS_REGION: us-east-2
   EKS_CLUSTER: vprofile-eks
@@ -38,7 +39,7 @@ jobs:
         with:
           terraform_version: 1.6.3
 
-      # 3️⃣ Configure AWS credentials for Terraform
+      # 3️⃣ Configure AWS credentials correctly
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -46,7 +47,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 4️⃣ Terraform Init with dynamic backend config
+      # 4️⃣ Terraform Init with dynamic backend
       - name: Terraform Init
         id: init
         run: |
