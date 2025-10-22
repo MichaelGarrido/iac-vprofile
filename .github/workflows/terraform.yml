@@ -1,5 +1,4 @@
 name: "Vprofile IAC"
-
 on:
   push:
     branches:
@@ -14,69 +13,51 @@ on:
       - terraform/**
 
 env:
-  BUCKET_TF_STATE: ${{ secrets.BUCKET_TF_STATE }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  BUCKET_TF_STATE: ${{ secrets.BUCKET_TF_STATE}}
   AWS_REGION: us-east-2
-  EKS_CLUSTER: vprofile-eks
+  EKS_CLUSTER: vprofile-eks 
+
 
 jobs:
-  terraform:
-    name: "Terraform CI/CD"
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: ./terraform
+    terraform:
+      name: "Apply terraform code changes"
+      runs-on: ubuntu-latest
+      defaults:
+        run:
+          shell: bash
+          working-directory: ./terraform
 
-    steps:
-      # 1️⃣ Checkout repository
-      - name: Checkout source code
-        uses: actions/checkout@v4
+          steps:
+            - name: Checkout sourse code
+              uses: actions/checkout@v4
 
-      # 2️⃣ Setup Terraform
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.6.3
+            - name: Setup Terraform with spacified version on the runner
+              uses: hashicorp/setup-terraform@v2
+              #with: 
+                #terraform_version: 1.6.3
 
-      # 3️⃣ Configure AWS credentials
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+            - name: terraform init
+              id: init
+              run: terraform init -backend-config="$BUCKET_TF_STATE"
+              
+            - name: Terraform format
+              id: fmt
+              run: terraform fmt -check
 
-      # 4️⃣ Terraform Init with dynamic backend
-      - name: Terraform Init
-        id: init
-        run: |
-          terraform init \
-            -backend-config="bucket=${BUCKET_TF_STATE}" \
-            -backend-config="key=terraform.tfstate" \
-            -backend-config="region=${AWS_REGION}"
+            - name: Terraform validate
+              id: validate
+              run: terraform validate
 
-      # 5️⃣ Terraform Format
-      - name: Terraform Format
-        id: fmt
-        run: terraform fmt -check
+            - name: Terraform plan
+              id: plan
+              run: terraform plan -no-color -input=false -out planfile
+              continue-on-error: true
 
-      # 6️⃣ Terraform Validate
-      - name: Terraform Validate
-        id: validate
-        run: terraform validate
+            - name: Terraform plan status
+              if: steps.plan.outcome == 'failure'
+              run: exit 1
 
-      # 7️⃣ Terraform Plan
-      - name: Terraform Plan
-        id: plan
-        run: terraform plan -no-color -input=false -out planfile
-        continue-on-error: true
 
-      # 8️⃣ Fail workflow if plan failed
-      - name: Terraform Plan Status
-        if: steps.plan.outcome == 'failure'
-        run: exit 1
-
-      # 9️⃣ Terraform Apply (only on main branch)
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && steps.plan.outcome == 'success'
-        run: terraform apply -auto-approve planfile
