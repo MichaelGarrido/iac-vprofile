@@ -35,18 +35,12 @@ jobs:
 
       - name: Setup Terraform with specified version on the runner
         uses: hashicorp/setup-terraform@v2
-        with: 
-          terraform_version: 1.6.3
+        #with: 
+          #terraform_version: 1.6.3
 
       - name: Terraform Init
         id: init
-        run: |
-          cat > backend.hcl <<EOF
-          bucket = "$BUCKET_TF_STATE"
-          region = "$AWS_REGION"
-          key    = "terraform.tfstate"
-          EOF
-          terraform init -backend-config=backend.hcl
+        run: terraform init -backend-config="$BUCKET_TF_STATE"
 
       - name: Terraform Format
         id: fmt
@@ -64,7 +58,3 @@ jobs:
       - name: Terraform Plan Status
         if: steps.plan.outcome == 'failure'
         run: exit 1
-
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: terraform apply -auto-approve planfile
