@@ -1,2 +1,21 @@
-.terraform*
+# Local Terraform downloads; keep .terraform.lock.hcl available for review.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+planfile
+crash.log
+crash.*.log
+
+# Local environment inputs may contain secrets.
+*.tfvars
+*.tfvars.json
+!*.example.tfvars
+!*.example.tfvars.json
+.env
+.env.*
+!.env.example
+
+# Desktop metadata.
+.DS_Store
 DS_Store
